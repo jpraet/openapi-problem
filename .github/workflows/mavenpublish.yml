@@ -6,7 +6,7 @@ name: Create release on tag creation
 on:
   push:
     tags:
-      - 'v*' # Match tags that are version numbers
+      - 'v*'
 
 jobs:
   build:
@@ -19,8 +19,8 @@ jobs:
       uses: actions/setup-java@v1
       with:
         java-version: 1.8
-        server-id: github # Value of the distributionManagement/repository/id field of the pom.xml
-        settings-path: ${{ github.workspace }} # location for the settings.xml file
+        server-id: ossrh
+        settings-path: ${{ github.workspace }}
     - name: Set release version in pom.xml
       run: |
          VERSION=`cut -d/ -f3 <<< $GITHUB_REF`
@@ -69,7 +69,19 @@ jobs:
         asset_path: ${{ env.OPENAPI_ARTIFACT_FILE }}
         asset_name: ${{ env.OPENAPI_ARTIFACT_NAME }}
         asset_content_type: application/zip
-#    - name: Publish to GitHub Packages Apache Maven
-#      run: mvn deploy -s $GITHUB_WORKSPACE/settings.xml
-#      env:
-#        GITHUB_TOKEN: ${{ github.token }}
+    - name: Install GPG secret key
+      id: install-secret-key
+      run: |
+        cat <(echo -e "${{ secrets.OSSRH_GPG_SECRET_KEY }}") | gpg --batch --import
+        gpg --list-secret-keys --keyid-format LONG
+    - name: Publish to Maven Central
+      id: publish-to-maven-central
+      env:
+        MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+        MAVEN_PASSWORD: ${{ secrets.OSSRH_TOKEN }}
+      run: |
+        mvn \
+        --no-transfer-progress \
+        --batch-mode \
+        -Dgpg.passphrase=${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }} \
+        deploy
