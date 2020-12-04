@@ -24,8 +24,6 @@ jobs:
         server-password: OSSRH_TOKEN
         gpg-private-key: ${{ secrets.OSSRH_GPG_SECRET_KEY }}
         gpg-passphrase: OSSRH_GPG_SECRET_KEY_PASSWORD
-        settings-path: ${{ github.workspace }}
-        
     - name: Set release version in pom.xml
       run: |
          VERSION=`cut -d/ -f3 <<< $GITHUB_REF`
@@ -80,4 +78,4 @@ jobs:
         OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
         OSSRH_TOKEN: ${{ secrets.OSSRH_TOKEN }}
         OSSRH_GPG_SECRET_KEY_PASSWORD: ${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }}
-      run: mvn -B deploy
+      run: mvn -B deploy -s $GITHUB_WORKSPACE/settings.xml
