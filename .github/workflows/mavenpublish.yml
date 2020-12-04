@@ -20,7 +20,12 @@ jobs:
       with:
         java-version: 1.8
         server-id: ossrh
+        server-username: OSSRH_USERNAME
+        server-password: OSSRH_TOKEN
+        gpg-private-key: ${{ secrets.OSSRH_GPG_SECRET_KEY }}
+        gpg-passphrase: OSSRH_GPG_SECRET_KEY_PASSWORD
         settings-path: ${{ github.workspace }}
+        
     - name: Set release version in pom.xml
       run: |
          VERSION=`cut -d/ -f3 <<< $GITHUB_REF`
@@ -69,19 +74,10 @@ jobs:
         asset_path: ${{ env.OPENAPI_ARTIFACT_FILE }}
         asset_name: ${{ env.OPENAPI_ARTIFACT_NAME }}
         asset_content_type: application/zip
-    - name: Install GPG secret key
-      id: install-secret-key
-      run: |
-        cat <(echo -e "${{ secrets.OSSRH_GPG_SECRET_KEY }}") | gpg --batch --import
-        gpg --list-secret-keys --keyid-format LONG
     - name: Publish to Maven Central
       id: publish-to-maven-central
       env:
-        MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
-        MAVEN_PASSWORD: ${{ secrets.OSSRH_TOKEN }}
-      run: |
-        mvn \
-        --no-transfer-progress \
-        --batch-mode \
-        -Dgpg.passphrase=${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }} \
-        deploy
+        OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+        OSSRH_TOKEN: ${{ secrets.OSSRH_TOKEN }}
+        OSSRH_GPG_SECRET_KEY_PASSWORD: ${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }}
+      run: mvn -B deploy
