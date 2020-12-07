@@ -1,18 +1,11 @@
-# This workflow will build a package using Maven and then publish it to GitHub packages when a release is created
-# For more information see: https://github.com/actions/setup-java#apache-maven-with-a-settings-path
-
 name: Create release on tag creation
-
 on:
   push:
     tags:
       - 'v*'
-
 jobs:
-  build:
-
+  release:
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v2
     - name: Set up JDK 1.8
@@ -28,20 +21,18 @@ jobs:
       run: |
          VERSION=`cut -d/ -f3 <<< $GITHUB_REF`
          VERSION=${VERSION:1}
-         mvn -B versions:set -DnewVersion=$VERSION --file pom.xml
+         mvn -B versions:set -DnewVersion=$VERSION
     - name: Build with Maven
       run: |
-        mvn -B package --file pom.xml
+        mvn -B package
         SWAGGER_ARTIFACT_FILE=`ls ./target/*-swagger.zip`
-        SWAGGER_ARTIFACT_NAME=`basename $SWAGGER_ARTIFACT_FILE`
-        OPENAPI_ARTIFACT_FILE=`ls ./target/*-openapi.zip`
-        OPENAPI_ARTIFACT_NAME=`basename $OPENAPI_ARTIFACT_FILE`
         echo "SWAGGER_ARTIFACT_FILE=$SWAGGER_ARTIFACT_FILE" >> $GITHUB_ENV
-        echo "SWAGGER_ARTIFACT_NAME=$SWAGGER_ARTIFACT_NAME" >> $GITHUB_ENV
+        echo "SWAGGER_ARTIFACT_NAME=`basename $SWAGGER_ARTIFACT_FILE`" >> $GITHUB_ENV
+        OPENAPI_ARTIFACT_FILE=`ls ./target/*-openapi.zip`
         echo "OPENAPI_ARTIFACT_FILE=$OPENAPI_ARTIFACT_FILE" >> $GITHUB_ENV
-        echo "OPENAPI_ARTIFACT_NAME=$OPENAPI_ARTIFACT_NAME" >> $GITHUB_ENV
-    - name: Create Release
-      id: create_release
+        echo "OPENAPI_ARTIFACT_NAME=`basename $OPENAPI_ARTIFACT_FILE`" >> $GITHUB_ENV
+    - name: Create GitHub release
+      id: create-release
       uses: actions/create-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -52,28 +43,25 @@ jobs:
             Changes:
             - [placeholder]
         draft: true
-    - name: Upload Swagger Release Asset
-      id: upload-swagger-release-asset 
+    - name: Upload swagger.zip release asset
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        upload_url: ${{ steps.create-release.outputs.upload_url }}
         asset_path: ${{ env.SWAGGER_ARTIFACT_FILE }}
         asset_name: ${{ env.SWAGGER_ARTIFACT_NAME }}
         asset_content_type: application/zip
-    - name: Upload OpenAPI Release Asset
-      id: upload-openapi-release-asset 
+    - name: Upload openapi.zip release asset
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        upload_url: ${{ steps.create-release.outputs.upload_url }}
         asset_path: ${{ env.OPENAPI_ARTIFACT_FILE }}
         asset_name: ${{ env.OPENAPI_ARTIFACT_NAME }}
         asset_content_type: application/zip
     - name: Publish to Maven Central
-      id: publish-to-maven-central
       env:
         OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
         OSSRH_TOKEN: ${{ secrets.OSSRH_TOKEN }}
